@@ -30,7 +30,7 @@ export default async function InvoicePage({
 
   console.log("result", result);
   return (
-    <main className=" max-w-5xl mx-auto py-12">
+    <main className="container max-w-5xl mx-auto py-12">
       <div className="flex justify-between mb-8">
         <h1 className="flex items-center gap-4 text-3xl font-semibold">
           Invoice {invoiceId}{" "}

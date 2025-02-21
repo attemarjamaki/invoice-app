@@ -20,9 +20,9 @@ export default function Page() {
   }
 
   return (
-    <main className="flex flex-col justify-center gap-6 max-w-5xl mx-auto py-12 px-2">
+    <main className="container max-w-5xl mx-auto py-12">
       <div className="flex justify-between">
-        <h1 className="text-3xl font-semibold">Create Invoice</h1>
+        <h1 className="text-3xl font-semibold mb-6">Create Invoice</h1>
       </div>
 
       <Form

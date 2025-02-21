@@ -19,8 +19,8 @@ export default async function Dashboard() {
   const results = await db.select().from(Invoices);
   console.log("results", results);
   return (
-    <main className="flex flex-col justify-center text-center gap-6 max-w-5xl mx-auto py-12">
-      <div className="flex justify-between">
+    <main className="container max-w-5xl h-full mx-auto py-12">
+      <div className="flex justify-between mb-6">
         <h1 className="text-3xl font-semibold">Invoices</h1>
         <p>
           <Button variant="ghost" asChild>
