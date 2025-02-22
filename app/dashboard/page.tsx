@@ -14,12 +14,23 @@ import Link from "next/link";
 import { db } from "@/db";
 import { Invoices } from "@/db/schema";
 import { cn } from "@/lib/utils";
+import { auth } from "@clerk/nextjs/server";
+import { eq } from "drizzle-orm";
 
 export default async function Dashboard() {
-  const results = await db.select().from(Invoices);
+  const { userId } = await auth();
+
+  if (!userId) {
+    return;
+  }
+
+  const results = await db
+    .select()
+    .from(Invoices)
+    .where(eq(Invoices.userId, userId));
   console.log("results", results);
   return (
-    <main className="container max-w-5xl h-full mx-auto py-12">
+    <main className="container max-w-5xl h-full mx-auto py-12 px-4">
       <div className="flex justify-between mb-6">
         <h1 className="text-3xl font-semibold">Invoices</h1>
         <p>
@@ -38,7 +49,7 @@ export default async function Dashboard() {
           <TableRow>
             <TableHead className="w-[100px]">Date</TableHead>
             <TableHead>Customer</TableHead>
-            <TableHead>Email</TableHead>
+            <TableHead className="hidden md:flex items-center">Email</TableHead>
             <TableHead className="text-center">Status</TableHead>
             <TableHead className="text-right">Value</TableHead>
           </TableRow>
@@ -63,7 +74,7 @@ export default async function Dashboard() {
                     Michael Scott
                   </Link>
                 </TableCell>
-                <TableCell className="text-left">
+                <TableCell className="hidden md:flex items-centerS text-left">
                   <Link href={`invoices/${result.id}`} className="p-4 block">
                     michael.scott@dundermifflin.com
                   </Link>

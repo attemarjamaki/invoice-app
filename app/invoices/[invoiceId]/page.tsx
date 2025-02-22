@@ -1,17 +1,24 @@
 import { notFound } from "next/navigation";
 
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 import { db } from "@/db";
 import { Invoices } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { auth } from "@clerk/nextjs/server";
 
 export default async function InvoicePage({
   params,
 }: {
   params: { invoiceId: string };
 }) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return;
+  }
+
   const invoiceId = parseInt(params.invoiceId);
 
   if (isNaN(invoiceId)) {
@@ -21,7 +28,7 @@ export default async function InvoicePage({
   const [result] = await db
     .select()
     .from(Invoices)
-    .where(eq(Invoices.id, invoiceId))
+    .where(and(eq(Invoices.id, invoiceId), eq(Invoices.userId, userId)))
     .limit(1);
 
   if (!result) {
@@ -30,7 +37,7 @@ export default async function InvoicePage({
 
   console.log("result", result);
   return (
-    <main className="container max-w-5xl mx-auto py-12">
+    <main className="container max-w-5xl mx-auto py-12 px-4">
       <div className="flex justify-between mb-8">
         <h1 className="flex items-center gap-4 text-3xl font-semibold">
           Invoice {invoiceId}{" "}
