@@ -12,7 +12,7 @@ export const AVAILABLE_STATUSES = [
     label: "Void",
   },
   {
-    id: "ucollectible",
+    id: "uncollectible",
     label: "Uncollectible",
   },
 ];
