@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 
 import { db } from "@/db";
-import { Invoices } from "@/db/schema";
+import { Customers, Invoices } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
@@ -37,7 +37,7 @@ export default async function InvoicePage({
 }: {
   params: { invoiceId: string };
 }) {
-  const { userId } = await auth();
+  const { userId, orgId } = await auth();
 
   if (!userId) {
     return;
@@ -49,17 +49,41 @@ export default async function InvoicePage({
     throw new Error("Invalid Invoice ID");
   }
 
-  const [result] = await db
-    .select()
-    .from(Invoices)
-    .where(and(eq(Invoices.id, invoiceId), eq(Invoices.userId, userId)))
-    .limit(1);
+  let result;
+
+  if (orgId) {
+    [result] = await db
+      .select()
+      .from(Invoices)
+      .innerJoin(Customers, eq(Invoices.customerId, Customers.id))
+      .where(
+        and(eq(Invoices.id, invoiceId), eq(Invoices.organizationId, orgId))
+      )
+      .limit(1);
+  } else {
+    [result] = await db
+      .select()
+      .from(Invoices)
+      .innerJoin(Customers, eq(Invoices.customerId, Customers.id))
+      .where(
+        and(
+          eq(Invoices.id, invoiceId),
+          eq(Invoices.userId, userId),
+          isNull(Invoices.organizationId)
+        )
+      )
+      .limit(1);
+  }
 
   if (!result) {
     notFound();
   }
 
-  console.log("result", result);
+  const invoice = {
+    ...result.invoices,
+    customer: result.customers,
+  };
+
   return (
     <main className="container max-w-5xl mx-auto py-12 px-4">
       <div className="flex items-center justify-between mb-8">
@@ -68,13 +92,13 @@ export default async function InvoicePage({
           <Badge
             className={cn(
               "capitalize",
-              result.status === "open" && "bg-blue-500",
-              result.status === "paid" && "bg-green-500",
-              result.status === "void" && "bg-orange-500",
-              result.status === "ucollectible" && "bg-red-500"
+              invoice.status === "open" && "bg-blue-500",
+              invoice.status === "paid" && "bg-green-500",
+              invoice.status === "void" && "bg-orange-500",
+              invoice.status === "ucollectible" && "bg-red-500"
             )}
           >
-            {result.status}
+            {invoice.status}
           </Badge>
         </h1>
         <div className="flex gap-2 items-center">
@@ -142,9 +166,9 @@ export default async function InvoicePage({
           </Dialog>
         </div>
       </div>
-      <p className="text-3xl mb-3">${(result.value / 100).toFixed(2)}</p>
+      <p className="text-3xl mb-3">${(invoice.value / 100).toFixed(2)}</p>
 
-      <p className="text-lg mb-8">{result.description}</p>
+      <p className="text-lg mb-8">{invoice.description}</p>
 
       <h2 className="font-bold text-lg mb-4">Billing Details</h2>
 
@@ -159,19 +183,19 @@ export default async function InvoicePage({
           <strong className="block w-28 flex-shrink-0 font-medium text-sm">
             Invoice Date
           </strong>
-          <span>{new Date(result.createTs).toLocaleDateString()}</span>
+          <span>{new Date(invoice.createTs).toLocaleDateString()}</span>
         </li>
         <li className="flex gap-4">
           <strong className="block w-28 flex-shrink-0 font-medium text-sm">
             Billing Name
           </strong>
-          <span></span>
+          <span>{invoice.customer.name}</span>
         </li>
         <li className="flex gap-4">
           <strong className="block w-28 flex-shrink-0 font-medium text-sm">
             Billing Email
           </strong>
-          <span></span>
+          <span>{invoice.customer.email}</span>
         </li>
       </ul>
     </main>

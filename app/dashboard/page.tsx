@@ -12,23 +12,41 @@ import { Button } from "@/components/ui/button";
 import { CirclePlus } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/db";
-import { Invoices } from "@/db/schema";
+import { Invoices, Customers } from "@/db/schema";
 import { cn } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 export default async function Dashboard() {
-  const { userId } = await auth();
+  const { userId, orgId } = await auth();
 
   if (!userId) {
     return;
   }
 
-  const results = await db
-    .select()
-    .from(Invoices)
-    .where(eq(Invoices.userId, userId));
-  console.log("results", results);
+  let results;
+
+  if (orgId) {
+    results = await db
+      .select()
+      .from(Invoices)
+      .innerJoin(Customers, eq(Invoices.customerId, Customers.id))
+      .where(eq(Invoices.organizationId, orgId));
+  } else {
+    results = await db
+      .select()
+      .from(Invoices)
+      .innerJoin(Customers, eq(Invoices.customerId, Customers.id))
+      .where(and(eq(Invoices.userId, userId), isNull(Invoices.organizationId)));
+  }
+
+  const invoices = results?.map(({ invoices, customers }) => {
+    return {
+      ...invoices,
+      customer: customers,
+    };
+  });
+
   return (
     <main className="container max-w-5xl h-full mx-auto py-12 px-4">
       <div className="flex justify-between mb-6">
@@ -55,7 +73,7 @@ export default async function Dashboard() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {results.map((result) => {
+          {invoices.map((result) => {
             return (
               <TableRow key={result.id}>
                 <TableCell className="text-left font-medium">
@@ -71,12 +89,12 @@ export default async function Dashboard() {
                     href={`invoices/${result.id}`}
                     className="font-semibold p-4 block"
                   >
-                    Michael Scott
+                    {result.customer.name}
                   </Link>
                 </TableCell>
                 <TableCell className="hidden md:flex items-centerS text-left">
                   <Link href={`invoices/${result.id}`} className="p-4 block">
-                    michael.scott@dundermifflin.com
+                    {result.customer.email}
                   </Link>
                 </TableCell>
                 <TableCell className="text-center">
