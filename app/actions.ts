@@ -1,12 +1,13 @@
 "use server";
 
 import { db } from "@/db";
-import { Customers, Invoices, Status } from "@/db/schema";
+import { Customers, Invoices, type Status } from "@/db/schema";
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import Stripe from "stripe";
+import { headers } from "next/headers";
 
 const stripe = new Stripe(String(process.env.STRIPE_API_SECRET));
 
@@ -66,7 +67,10 @@ export async function updateStatusAction(formData: FormData) {
       .update(Invoices)
       .set({ status })
       .where(
-        and(eq(Invoices.id, parseInt(id)), eq(Invoices.organizationId, orgId))
+        and(
+          eq(Invoices.id, Number.parseInt(id)),
+          eq(Invoices.organizationId, orgId)
+        )
       );
   } else {
     await db
@@ -74,7 +78,7 @@ export async function updateStatusAction(formData: FormData) {
       .set({ status })
       .where(
         and(
-          eq(Invoices.id, parseInt(id)),
+          eq(Invoices.id, Number.parseInt(id)),
           eq(Invoices.userId, userId),
           isNull(Invoices.organizationId)
         )
@@ -112,4 +116,40 @@ export async function deleteInvoiceAction(formData: FormData) {
   }
 
   redirect("/dashboard");
+}
+
+export async function createPayment(formData: FormData) {
+  const headersList = headers();
+  const origin = (await headersList).get("origin");
+  const id = parseInt(formData.get("id") as string);
+  const [result] = await db
+    .select({
+      status: Invoices.status,
+      value: Invoices.value,
+    })
+    .from(Invoices)
+    .where(eq(Invoices.id, id))
+    .limit(1);
+
+  const session = await stripe.checkout.sessions.create({
+    line_items: [
+      {
+        price_data: {
+          currency: "eur",
+          product: "prod_Rt6fvOMNNaoKVT",
+          unit_amount: result.value,
+        },
+        quantity: 1,
+      },
+    ],
+    mode: "payment",
+    success_url: `${origin}/invoices/${id}/payment?status=success`,
+    cancel_url: `${origin}/invoices/${id}/payment?status=canceled`,
+  });
+
+  if (!session.url) {
+    throw new Error("Invalid Session");
+  }
+
+  redirect(session.url);
 }

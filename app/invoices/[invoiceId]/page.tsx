@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, Ellipsis, Trash2 } from "lucide-react";
+import { ChevronDown, CreditCard, Ellipsis, Trash2 } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -29,6 +29,7 @@ import {
 
 import { AVAILABLE_STATUSES } from "@/data/invoices";
 import { updateStatusAction, deleteInvoiceAction } from "@/app/actions";
+import Link from "next/link";
 
 export default async function InvoicePage({
   params,
@@ -112,6 +113,7 @@ export default async function InvoicePage({
                 <DropdownMenuItem key={status.id}>
                   <form action={updateStatusAction} className="w-full">
                     <input type="hidden" name="id" value={invoiceId} />
+                    <input type="hidden" name="status" value={status.id} />
                     <button className="w-full text-left">{status.label}</button>
                   </form>
                 </DropdownMenuItem>
@@ -135,6 +137,15 @@ export default async function InvoicePage({
                       Delete
                     </button>
                   </DialogTrigger>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Link
+                    href={`/invoices/${invoice.id}/payment`}
+                    className="flex items-center gap-2 w-full"
+                  >
+                    <CreditCard />
+                    Payment
+                  </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
